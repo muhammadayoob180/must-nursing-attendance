@@ -398,13 +398,6 @@ function switchTab(tabName) {
 }
 
 // --- EVENT LISTENERS ---
-$$('.chip-btn').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    $('#login-username').value = btn.dataset.user;
-    $('#login-password').value = btn.dataset.pass;
-  });
-});
-
 $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
