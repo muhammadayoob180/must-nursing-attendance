@@ -174,14 +174,14 @@
             <h2>Users (Admin & Shift CRs)</h2>
             <div id="admin-users-list" class="mini-list"></div>
             <hr class="divider" />
-            <form id="add-user-form" class="form-stack">
+            <form id="add-user-form" class="form-stack" autocomplete="off">
               <h3>Add / Update User</h3>
               <div class="two-col">
-                <input id="new-user-username" type="text" placeholder="Username" required />
-                <input id="new-user-fullname" type="text" placeholder="Full Name" required />
+                <input id="new-user-username" type="text" autocomplete="off" placeholder="Username" required />
+                <input id="new-user-fullname" type="text" autocomplete="off" placeholder="Full Name" required />
               </div>
               <div class="three-col">
-                <input id="new-user-pass" type="password" placeholder="Password" required />
+                <input id="new-user-pass" type="password" autocomplete="new-password" placeholder="Password" required />
                 <select id="new-user-role">
                   <option value="cr">CR</option>
                   <option value="admin">Admin</option>

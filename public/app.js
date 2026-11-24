@@ -23,6 +23,11 @@ async function api(url, opts = {}) {
     ...opts
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && !url.includes('/api/auth/')) {
+    state.user = null;
+    $('#app-view').classList.add('hidden');
+    $('#login-view').classList.remove('hidden');
+  }
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }
