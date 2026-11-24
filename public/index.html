@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CR Attendance Portal</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- LOGIN VIEW -->
+  <section id="login-view" class="login-wrapper">
+    <div class="login-card">
+      <div class="brand-header">
+        <div id="login-logo-box" class="logo-box">
+          <span class="logo-placeholder">LOGO</span>
+        </div>
+        <h1 id="login-uni-name">CR Attendance Portal</h1>
+        <p id="login-class-name" class="muted">Class Attendance & Teacher Report System</p>
+      </div>
+
+      <form id="login-form" class="form-stack">
+        <div class="field">
+          <label for="login-username">Username</label>
+          <input id="login-username" type="text" autocomplete="username" placeholder="e.g. morning_cr" required />
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" autocomplete="current-password" placeholder="Enter password" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+      </form>
+
+      <details class="demo-hint">
+        <summary>Default Accounts (Change in Admin)</summary>
+        <div class="demo-grid">
+          <button type="button" class="chip-btn" data-user="admin" data-pass="admin123">Main Admin (<code>admin</code>)</button>
+          <button type="button" class="chip-btn" data-user="morning_cr" data-pass="morning123">Morning CR (<code>morning_cr</code>)</button>
+          <button type="button" class="chip-btn" data-user="evening_cr" data-pass="evening123">Evening CR (<code>evening_cr</code>)</button>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- MAIN APP VIEW -->
+  <div id="app-view" class="app-shell hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div id="nav-logo-box" class="logo-box logo-sm">
+          <span class="logo-placeholder">LOGO</span>
+        </div>
+        <div>
+          <div id="nav-class-name" class="topbar-title">Class Attendance</div>
+          <div id="nav-uni-name" class="topbar-sub">University</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="user-pill">
+          <span id="user-name-label">User</span>
+          <span id="user-role-badge" class="badge">CR</span>
+        </div>
+        <button id="logout-btn" class="btn btn-ghost btn-sm">Logout</button>
+      </div>
+    </header>
+
+    <nav class="tab-bar">
+      <button class="tab-btn active" data-tab="attendance">Mark Attendance</button>
+      <button class="tab-btn" data-tab="report">Teacher Report</button>
+      <button class="tab-btn" data-tab="history">History</button>
+      <button id="admin-tab-btn" class="tab-btn hidden" data-tab="admin">Admin</button>
+    </nav>
+
+    <main class="container">
+      <!-- TAB 1: MARK ATTENDANCE -->
+      <section id="tab-attendance" class="tab-panel">
+        <div class="card controls-card">
+          <div class="controls-grid">
+            <div class="field">
+              <label for="att-date">Date</label>
+              <input id="att-date" type="date" />
+            </div>
+            <div class="field">
+              <label for="att-subject">Subject & Teacher</label>
+              <select id="att-subject"></select>
+            </div>
+            <div class="field" id="att-shift-wrap">
+              <label for="att-shift">Shift</label>
+              <select id="att-shift">
+                <option value="morning">Morning</option>
+                <option value="evening">Evening</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="att-timeslot">Time Slot (Optional)</label>
+              <input id="att-timeslot" type="text" placeholder="e.g. 09:00 AM - 10:30 AM" />
+            </div>
+          </div>
+
+          <div class="att-toolbar">
+            <input id="att-search" type="search" class="search-input" placeholder="Search roll no or name..." />
+            <div class="quick-actions">
+              <button id="mark-all-present" type="button" class="btn btn-outline-green btn-sm">All Present</button>
+              <button id="mark-all-absent" type="button" class="btn btn-outline-red btn-sm">All Absent</button>
+            </div>
+          </div>
+
+          <div class="stats-bar">
+            <span class="stat-pill stat-total">Total: <strong id="stat-total">0</strong></span>
+            <span class="stat-pill stat-present">Present: <strong id="stat-present">0</strong></span>
+            <span class="stat-pill stat-absent">Absent: <strong id="stat-absent">0</strong></span>
+          </div>
+        </div>
+
+        <div id="att-student-list" class="student-list"></div>
+
+        <div class="card remarks-card">
+          <div class="two-col">
+            <div class="field">
+              <label for="att-marked-by">Marked By (Your Name)</label>
+              <input id="att-marked-by" type="text" placeholder="e.g. Ali Raza (CR)" />
+            </div>
+            <div class="field">
+              <label for="att-remarks">Remarks (Optional)</label>
+              <input id="att-remarks" type="text" placeholder="Any note for the teacher..." />
+            </div>
+          </div>
+          <div class="save-bar">
+            <button id="save-att-btn" type="button" class="btn btn-primary">Save Attendance</button>
+            <button id="save-and-report-btn" type="button" class="btn btn-secondary">Save & View Report</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: TEACHER REPORT -->
+      <section id="tab-report" class="tab-panel hidden">
+        <div class="card controls-card">
+          <div class="controls-grid">
+            <div class="field">
+              <label for="rep-date">Date</label>
+              <input id="rep-date" type="date" />
+            </div>
+            <div class="field">
+              <label for="rep-subject">Subject</label>
+              <select id="rep-subject"></select>
+            </div>
+            <div class="field" id="rep-shift-wrap">
+              <label for="rep-shift">Shift</label>
+              <select id="rep-shift">
+                <option value="morning">Morning</option>
+                <option value="evening">Evening</option>
+              </select>
+            </div>
+          </div>
+          <div class="export-actions">
+            <button id="download-pdf-btn" type="button" class="btn btn-primary">Download PDF Report</button>
+            <button id="copy-whatsapp-btn" type="button" class="btn btn-outline-green">Copy WhatsApp Text</button>
+            <button id="download-csv-btn" type="button" class="btn btn-ghost">Export CSV / Excel</button>
+          </div>
+        </div>
+
+        <div id="report-preview" class="card report-sheet">
+          <p class="muted">Select a date and subject to preview the Teacher Report.</p>
+        </div>
+      </section>
+
+      <!-- TAB 3: HISTORY -->
+      <section id="tab-history" class="tab-panel hidden">
+        <div class="card">
+          <div class="section-head">
+            <h2>Saved Daily Attendance</h2>
+            <button id="refresh-history-btn" class="btn btn-ghost btn-sm">Refresh</button>
+          </div>
+          <div id="history-list" class="history-list"></div>
+        </div>
+      </section>
+
+      <!-- TAB 4: ADMIN PANEL -->
+      <section id="tab-admin" class="tab-panel hidden">
+        <div class="admin-grid">
+          <!-- Users Management -->
+          <div class="card">
+            <h2>Users (Admin & Shift CRs)</h2>
+            <div id="admin-users-list" class="mini-list"></div>
+            <hr class="divider" />
+            <form id="add-user-form" class="form-stack">
+              <h3>Add / Update User</h3>
+              <div class="two-col">
+                <input id="new-user-username" type="text" placeholder="Username" required />
+                <input id="new-user-fullname" type="text" placeholder="Full Name" required />
+              </div>
+              <div class="three-col">
+                <input id="new-user-pass" type="password" placeholder="Password" required />
+                <select id="new-user-role">
+                  <option value="cr">CR</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <select id="new-user-shift">
+                  <option value="morning">Morning</option>
+                  <option value="evening">Evening</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Create User</button>
+            </form>
+          </div>
+
+          <!-- Clinical Placements & Faculty -->
+          <div class="card">
+            <h2>Clinical Placements & Faculty</h2>
+            <div id="admin-subjects-list" class="mini-list"></div>
+            <hr class="divider" />
+            <form id="add-subject-form" class="form-stack">
+              <div class="two-col">
+                <input id="new-sub-name" type="text" placeholder="Placement / Duty (e.g. Khwaja Fareed Hospital)" required />
+                <input id="new-sub-teacher" type="text" placeholder="Faculty Name (e.g. Ms. Kiran Ejaz)" required />
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Add Placement / Faculty</button>
+            </form>
+          </div>
+
+          <!-- Students Management -->
+          <div class="card admin-students-card">
+            <div class="section-head">
+              <h2>Students & Monthly Duty Roster</h2>
+              <select id="admin-student-filter" class="inline-select">
+                <option value="morning">Morning Shift</option>
+                <option value="evening">Evening Shift</option>
+                <option value="all">All Shifts</option>
+              </select>
+            </div>
+            <div class="quick-actions" style="margin-bottom: 10px; flex-wrap: wrap;">
+              <button id="shuffle-wards-btn" type="button" class="btn btn-secondary btn-sm">Monthly Shuffle Wards</button>
+              <button id="swap-shifts-btn" type="button" class="btn btn-ghost btn-sm">Swap Morning ↔ Evening</button>
+            </div>
+            <div id="admin-students-list" class="mini-list scrollable-list"></div>
+            <hr class="divider" />
+            <form id="add-student-form" class="form-stack">
+              <h3>Add Single Student</h3>
+              <div class="three-col">
+                <input id="new-st-roll" type="text" placeholder="Roll No" required />
+                <input id="new-st-name" type="text" placeholder="Student Name" required />
+                <input id="new-st-ward" type="text" placeholder="Ward (e.g. CCU)" />
+                <select id="new-st-shift">
+                  <option value="morning">Morning</option>
+                  <option value="evening">Evening</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Add Student</button>
+            </form>
+            <hr class="divider" />
+            <form id="bulk-student-form" class="form-stack">
+              <h3>Bulk Import (Roll No, Name, Ward per line)</h3>
+              <div class="two-col">
+                <select id="bulk-shift">
+                  <option value="morning">Morning Shift</option>
+                  <option value="evening">Evening Shift</option>
+                </select>
+                <label class="checkbox-label">
+                  <input id="bulk-replace" type="checkbox" /> Replace existing list for this shift
+                </label>
+              </div>
+              <textarea id="bulk-lines" rows="4" placeholder="2023-NURSING-F-002, Muhammad Ali Raza, CCU&#10;2023-NURSING-F-003, Muhammad Nasir, Emergency"></textarea>
+              <button type="submit" class="btn btn-secondary btn-sm">Import Students</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <div class="dev-credit">
+        <div class="dev-credit-title">Developed &amp; Designed by <strong>AR BROTHERS</strong></div>
+        <div class="dev-credit-author">Ayoob Rabnawaz</div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
