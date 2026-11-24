@@ -114,21 +114,15 @@ async function enterApp(user) {
 
 async function loadSubjects() {
   state.subjects = await api('/api/subjects');
-  const options = state.subjects
-    .map((s) => `<option value="${s.id}">${s.code ? s.code + ' — ' : ''}${s.name} (${s.teacher_name})</option>`)
-    .join('');
-  $('#att-subject').innerHTML = options || '<option value="">No subjects</option>';
-  $('#rep-subject').innerHTML = options || '<option value="">No subjects</option>';
 }
 
 // --- ATTENDANCE TAB ---
 async function loadAttendanceSheet() {
   const date = $('#att-date').value;
-  const subject_id = $('#att-subject').value;
   const shift = $('#att-shift').value;
-  if (!date || !subject_id) return;
+  if (!date) return;
 
-  const data = await api(`/api/attendance?date=${encodeURIComponent(date)}&subject_id=${subject_id}&shift=${shift}`);
+  const data = await api(`/api/attendance?date=${encodeURIComponent(date)}&shift=${shift}`);
   state.students = data.students;
   state.statusMap = {};
 
@@ -137,7 +131,6 @@ async function loadAttendanceSheet() {
     state.statusMap[st.id] = data.statusMap[st.id] || 'present';
   }
 
-  $('#att-timeslot').value = data.session?.time_slot || '';
   $('#att-remarks').value = data.session?.remarks || '';
   $('#att-marked-by').value = data.session?.marked_by_name || state.user?.full_name || '';
   renderStudentList();
@@ -194,9 +187,8 @@ function updateStats() {
 
 async function saveAttendance(goToReport = false) {
   const date = $('#att-date').value;
-  const subject_id = $('#att-subject').value;
   const shift = $('#att-shift').value;
-  if (!date || !subject_id) return showToast('Select date and subject', 'error');
+  if (!date) return showToast('Select date', 'error');
 
   const records = state.students.map((st) => ({
     student_id: st.id,
@@ -207,9 +199,7 @@ async function saveAttendance(goToReport = false) {
     method: 'POST',
     body: JSON.stringify({
       date,
-      subject_id,
       shift,
-      time_slot: $('#att-timeslot').value,
       remarks: $('#att-remarks').value,
       marked_by_name: $('#att-marked-by').value,
       records
@@ -219,7 +209,6 @@ async function saveAttendance(goToReport = false) {
   showToast('Attendance saved!');
   if (goToReport) {
     $('#rep-date').value = date;
-    $('#rep-subject').value = subject_id;
     $('#rep-shift').value = shift;
     switchTab('report');
     await loadReportPreview();
@@ -229,11 +218,10 @@ async function saveAttendance(goToReport = false) {
 // --- TEACHER REPORT TAB ---
 async function loadReportPreview() {
   const date = $('#rep-date').value;
-  const subject_id = $('#rep-subject').value;
   const shift = $('#rep-shift').value;
-  if (!date || !subject_id) return;
+  if (!date) return;
 
-  const data = await api(`/api/reports/daily?date=${encodeURIComponent(date)}&subject_id=${subject_id}&shift=${shift}`);
+  const data = await api(`/api/reports/daily?date=${encodeURIComponent(date)}&shift=${shift}`);
   state.currentReport = data;
 
   const { settings, subject, session, markedByName, presentStudents, absentStudents, totalStudents } = data;
@@ -437,7 +425,6 @@ $$('.tab-btn').forEach((btn) => {
 });
 
 $('#att-date').addEventListener('change', loadAttendanceSheet);
-$('#att-subject').addEventListener('change', loadAttendanceSheet);
 $('#att-shift').addEventListener('change', loadAttendanceSheet);
 $('#att-search').addEventListener('input', renderStudentList);
 
@@ -464,23 +451,20 @@ $('#save-att-btn').addEventListener('click', () => saveAttendance(false).catch((
 $('#save-and-report-btn').addEventListener('click', () => saveAttendance(true).catch((e) => showToast(e.message, 'error')));
 
 $('#rep-date').addEventListener('change', loadReportPreview);
-$('#rep-subject').addEventListener('change', loadReportPreview);
 $('#rep-shift').addEventListener('change', loadReportPreview);
 
 $('#download-pdf-btn').addEventListener('click', () => {
   const date = $('#rep-date').value;
-  const sub = $('#rep-subject').value;
   const shift = $('#rep-shift').value;
-  if (!date || !sub) return;
-  window.location.href = `/api/reports/pdf?date=${encodeURIComponent(date)}&subject_id=${sub}&shift=${shift}`;
+  if (!date) return;
+  window.location.href = `/api/reports/pdf?date=${encodeURIComponent(date)}&shift=${shift}`;
 });
 
 $('#download-csv-btn').addEventListener('click', () => {
   const date = $('#rep-date').value;
-  const sub = $('#rep-subject').value;
   const shift = $('#rep-shift').value;
-  if (!date || !sub) return;
-  window.location.href = `/api/reports/csv?date=${encodeURIComponent(date)}&subject_id=${sub}&shift=${shift}`;
+  if (!date) return;
+  window.location.href = `/api/reports/csv?date=${encodeURIComponent(date)}&shift=${shift}`;
 });
 
 $('#copy-whatsapp-btn').addEventListener('click', copyWhatsAppReport);
@@ -490,7 +474,6 @@ $('#history-list').addEventListener('click', async (e) => {
   const btn = e.target.closest('.view-hist-btn');
   if (!btn) return;
   $('#rep-date').value = btn.dataset.date;
-  $('#rep-subject').value = btn.dataset.sub;
   if (state.user.role === 'admin') $('#rep-shift').value = btn.dataset.shift;
   switchTab('report');
   await loadReportPreview();

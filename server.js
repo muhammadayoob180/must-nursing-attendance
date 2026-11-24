@@ -47,10 +47,30 @@ function getSettingsMap() {
   return map;
 }
 
+function getDefaultSubject() {
+  let sub = db.prepare('SELECT * FROM subjects WHERE active = 1 ORDER BY id ASC LIMIT 1').get();
+  if (!sub) {
+    const info = db
+      .prepare('INSERT INTO subjects (code, name, teacher_name) VALUES (?, ?, ?)')
+      .run('CLINICAL', 'Clinical Duty — Khwaja Fareed Hospital', 'Ms. Kiran Ejaz');
+    sub = db.prepare('SELECT * FROM subjects WHERE id = ?').get(info.lastInsertRowid);
+  }
+  return sub;
+}
+
+function resolveSubject(subjectId) {
+  const id = Number(subjectId);
+  if (id) {
+    const found = db.prepare('SELECT * FROM subjects WHERE id = ?').get(id);
+    if (found) return found;
+  }
+  return getDefaultSubject();
+}
+
 function buildReportData(date, subjectId, shift) {
   const settings = getSettingsMap();
-  const subject = db.prepare('SELECT * FROM subjects WHERE id = ?').get(subjectId);
-  if (!subject) return null;
+  const subject = resolveSubject(subjectId);
+  const resolvedSubId = subject.id;
 
   const students = db
     .prepare('SELECT id, roll_no, name, ward, shift FROM students WHERE shift = ? AND active = 1 ORDER BY id ASC')
@@ -58,7 +78,7 @@ function buildReportData(date, subjectId, shift) {
 
   const records = db
     .prepare('SELECT student_id, status, marked_by FROM attendance_records WHERE date = ? AND shift = ? AND subject_id = ?')
-    .all(date, shift, subjectId);
+    .all(date, shift, resolvedSubId);
 
   const recordMap = new Map(records.map((r) => [r.student_id, r.status]));
 
@@ -81,7 +101,7 @@ function buildReportData(date, subjectId, shift) {
        LEFT JOIN users u ON u.id = s.marked_by
        WHERE s.date = ? AND s.shift = ? AND s.subject_id = ?`
     )
-    .get(date, shift, subjectId);
+    .get(date, shift, resolvedSubId);
 
   let logoDiskPath = '';
   if (settings.logo_path) {
@@ -379,23 +399,20 @@ app.delete('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
 // --- ATTENDANCE ---
 app.get('/api/attendance', requireAuth, (req, res) => {
   const date = req.query.date || new Date().toISOString().slice(0, 10);
-  const subjectId = Number(req.query.subject_id);
+  const subject = resolveSubject(req.query.subject_id);
+  const subjectId = subject.id;
   const shift = resolveAllowedShift(req.user, req.query.shift);
 
   const students = db
     .prepare('SELECT id, roll_no, name, ward, shift FROM students WHERE shift = ? AND active = 1 ORDER BY id ASC')
     .all(shift);
 
-  let records = [];
-  let session = null;
-  if (subjectId) {
-    records = db
-      .prepare('SELECT student_id, status FROM attendance_records WHERE date = ? AND shift = ? AND subject_id = ?')
-      .all(date, shift, subjectId);
-    session = db
-      .prepare('SELECT time_slot, remarks, marked_by_name, updated_at FROM attendance_sessions WHERE date = ? AND shift = ? AND subject_id = ?')
-      .get(date, shift, subjectId);
-  }
+  const records = db
+    .prepare('SELECT student_id, status FROM attendance_records WHERE date = ? AND shift = ? AND subject_id = ?')
+    .all(date, shift, subjectId);
+  const session = db
+    .prepare('SELECT time_slot, remarks, marked_by_name, updated_at FROM attendance_sessions WHERE date = ? AND shift = ? AND subject_id = ?')
+    .get(date, shift, subjectId);
 
   const statusMap = {};
   for (const r of records) statusMap[r.student_id] = r.status;
@@ -405,11 +422,11 @@ app.get('/api/attendance', requireAuth, (req, res) => {
 
 app.post('/api/attendance', requireAuth, (req, res) => {
   const { date, subject_id, shift: requestedShift, records, time_slot, remarks, marked_by_name } = req.body || {};
-  if (!date || !subject_id || !Array.isArray(records)) {
-    return res.status(400).json({ error: 'date, subject_id, and records are required' });
+  if (!date || !Array.isArray(records)) {
+    return res.status(400).json({ error: 'date and records are required' });
   }
   const shift = resolveAllowedShift(req.user, requestedShift);
-  const subjectId = Number(subject_id);
+  const subjectId = resolveSubject(subject_id).id;
   const finalMarkedByName = (marked_by_name || req.user.full_name || '').trim();
 
   // Validate that all student IDs belong to the allowed shift
@@ -491,36 +508,22 @@ app.get('/api/attendance/history', requireAuth, (req, res) => {
 // --- REPORTS & EXPORTS ---
 app.get('/api/reports/daily', requireAuth, (req, res) => {
   const date = req.query.date || new Date().toISOString().slice(0, 10);
-  const subjectId = Number(req.query.subject_id);
   const shift = resolveAllowedShift(req.user, req.query.shift);
-
-  if (!subjectId) return res.status(400).json({ error: 'subject_id is required' });
-  const data = buildReportData(date, subjectId, shift);
-  if (!data) return res.status(404).json({ error: 'Subject not found' });
-
+  const data = buildReportData(date, req.query.subject_id, shift);
   res.json(data);
 });
 
 app.get('/api/reports/pdf', requireAuth, (req, res) => {
   const date = req.query.date || new Date().toISOString().slice(0, 10);
-  const subjectId = Number(req.query.subject_id);
   const shift = resolveAllowedShift(req.user, req.query.shift);
-
-  if (!subjectId) return res.status(400).json({ error: 'subject_id is required' });
-  const data = buildReportData(date, subjectId, shift);
-  if (!data) return res.status(404).json({ error: 'Subject not found' });
-
+  const data = buildReportData(date, req.query.subject_id, shift);
   generateAttendancePDF(res, data);
 });
 
 app.get('/api/reports/csv', requireAuth, (req, res) => {
   const date = req.query.date || new Date().toISOString().slice(0, 10);
-  const subjectId = Number(req.query.subject_id);
   const shift = resolveAllowedShift(req.user, req.query.shift);
-
-  if (!subjectId) return res.status(400).json({ error: 'subject_id is required' });
-  const data = buildReportData(date, subjectId, shift);
-  if (!data) return res.status(404).json({ error: 'Subject not found' });
+  const data = buildReportData(date, req.query.subject_id, shift);
 
   const escapeCsv = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
   const lines = [
